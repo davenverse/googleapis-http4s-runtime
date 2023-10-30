@@ -17,5 +17,3 @@ trait OAuth2[F[_]] {
       scopes: Seq[String],
   ): F[AccessToken]
 }
-
-
