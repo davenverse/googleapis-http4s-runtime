@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Christopher Davenport
+ * Copyright 2024 Christopher Davenport
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,6 @@ package org.http4s
 package googleapis.runtime.auth
 
 import scodec.bits.ByteVector
-
 
 trait OAuth2[F[_]] {
   def getAccessToken(
