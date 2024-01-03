@@ -71,6 +71,12 @@ object CredentialsFile {
       service_account_impersonation_url: Option[String],
       service_account_impersonation: Option[ServiceAccountImpersonationSettings],
       quota_project_id: Option[String],
+      /** This determines the source to obtain subject token. The value is one of the
+        * followings;
+        *
+        *   - Url: The client should send http request to the url to get subject token
+        *   - File: There's a local file that contains subject token
+        */
       credential_source: ExternalAccount.ExternalCredentialSource,
       // #[serde(skip)]
       scopes: Seq[String],
