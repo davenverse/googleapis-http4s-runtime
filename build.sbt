@@ -15,7 +15,7 @@ ThisBuild / scalaVersion := Scala213
 
 ThisBuild / githubWorkflowJavaVersions := Seq(JavaSpec.temurin("17"))
 
-val http4sVersion = "0.23.23"
+val http4sVersion = "0.23.25"
 
 lazy val root = tlCrossRootProject.aggregate(runtime)
 
