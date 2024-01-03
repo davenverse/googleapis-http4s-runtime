@@ -84,9 +84,9 @@ object CredentialsFile {
         Decoder
           .withReattempt(cursor =>
             cursor.downField("type").as[String] match {
-              case Right("Json") =>
+              case Right("json") =>
                 cursor.downField("subject_token_field_name").as[String].map(Json(_))
-              case Right("Text") => Right(Text)
+              case Right("text") => Right(Text)
               case Right(value) =>
                 Left(
                   io.circe.DecodingFailure(
