@@ -64,6 +64,11 @@ object CredentialsFile {
       private val refresh_token: String, // SecretValue,
       quota_project_id: Option[String],
   ) extends CredentialsFile
+
+  /** @param credential_source
+    *   This determines the source to obtain subject token. The value is either Url or File to
+    *   get subject token from.
+    */
   final case class ExternalAccount(
       audience: String,
       subject_token_type: String,
@@ -71,12 +76,6 @@ object CredentialsFile {
       service_account_impersonation_url: Option[String],
       service_account_impersonation: Option[ServiceAccountImpersonationSettings],
       quota_project_id: Option[String],
-      /** This determines the source to obtain subject token. The value is one of the
-        * followings;
-        *
-        *   - Url: The client should send http request to the url to get subject token
-        *   - File: There's a local file that contains subject token
-        */
       credential_source: ExternalAccount.ExternalCredentialSource,
       // #[serde(skip)]
       scopes: Seq[String],
