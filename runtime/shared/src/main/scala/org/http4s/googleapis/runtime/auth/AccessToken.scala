@@ -28,22 +28,30 @@ import scala.concurrent.duration._
 sealed abstract class AccessToken private {
   def token: String
   def expiresAt: FiniteDuration
+  def tokenType: String
+  def headerValue = s"$tokenType $token"
 }
 
 object AccessToken {
-  private case class Impl(token: String, expiresAt: FiniteDuration) extends AccessToken {
+  private case class Impl(token: String, expiresAt: FiniteDuration, tokenType: String)
+      extends AccessToken {
     override def productPrefix = "AccessToken"
   }
 
-  private def apply(token: String, expiresAt: FiniteDuration): AccessToken =
-    Impl(token, expiresAt)
+  private def apply(token: String, expiresAt: FiniteDuration, tokenType: String): AccessToken =
+    Impl(token, expiresAt, tokenType)
 
   implicit def entityDecoder[F[_]](implicit F: Temporal[F]): EntityDecoder[F, AccessToken] =
-    jsonOf(F, Decoder.forProduct2("access_token", "expires_in")(Tuple2[String, Int](_, _)))
-      .flatMapR { case (accessToken, expiresIn) =>
+    jsonOf(
+      F,
+      Decoder.forProduct3("access_token", "expires_in", "token_type")(
+        Tuple3[String, Int, String](_, _, _),
+      ),
+    )
+      .flatMapR { case (accessToken, expiresIn, tokenType) =>
         EitherT.liftF {
           F.realTime.map { now =>
-            AccessToken(accessToken, now + expiresIn.seconds)
+            AccessToken(accessToken, now + expiresIn.seconds, tokenType)
           }
         }
       }
