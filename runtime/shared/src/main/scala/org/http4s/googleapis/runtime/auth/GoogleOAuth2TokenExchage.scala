@@ -25,6 +25,7 @@ import fs2.io.file.Path
 import io.circe.Decoder
 import io.circe.Json
 import io.circe.JsonObject
+import io.circe.generic.semiauto.deriveDecoder
 import io.circe.parser
 import org.http4s.circe.jsonEncoderOf
 import org.http4s.circe.jsonOf
@@ -91,10 +92,11 @@ object GoogleOAuth2TokenExchange {
             val bearer = (tkn: AccessToken) => Credentials.Token(AuthScheme.Bearer, tkn.token)
             for {
               tkn <- stsTkn
-              tkn <- client.expect[AccessToken](
+              iamTkn <- client.expect[IamCredentialsTokenResponse](
                 req.withHeaders(Authorization(bearer(tkn))),
               )
-            } yield tkn
+
+            } yield tkn.withToken(iamTkn.accessToken)
         }
       }
     }
@@ -127,4 +129,20 @@ object GoogleOAuth2TokenExchange {
         F.fromEither(parser.parse(tokenOrJson).flatMap(dec.decodeJson(_)))
     }
   } yield tkn
+}
+
+/** @param accessToken
+  *   access token
+  * @param expireTime
+  *   DateTime string in utc
+  */
+private[auth] case class IamCredentialsTokenResponse(
+    accessToken: String, // SecretValue,
+    expireTime: String,
+)
+
+object IamCredentialsTokenResponse {
+  implicit def ed[F[_]: Concurrent]: EntityDecoder[F, IamCredentialsTokenResponse] =
+    jsonOf[F, IamCredentialsTokenResponse]
+  implicit val ev: Decoder[IamCredentialsTokenResponse] = deriveDecoder
 }
