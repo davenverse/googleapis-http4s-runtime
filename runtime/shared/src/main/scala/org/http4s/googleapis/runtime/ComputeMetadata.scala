@@ -31,6 +31,11 @@ trait ComputeMetadata[F[_]] {
   def getContainerName: F[String]
   def getNamespaceId: F[String]
   def getAccessToken: F[AccessToken]
+
+  /** Returns a Google ID Token from the metadata server on ComputeEngine
+    * @param audience
+    *   the aud: field the IdToken should include
+    */
   def getIdToken(audience: String): F[String]
 }
 
