@@ -107,12 +107,16 @@ object CredentialsFile {
   ) extends CredentialsFile
 
   object ExternalAccount {
+
+    /** Base credential source class. Dictates the retrieval method of the external credential.
+      */
     sealed trait ExternalCredentialSource
     // #[serde(untagged)]
     object ExternalCredentialSource {
       implicit val ev: Decoder[ExternalCredentialSource] =
         deriveDecoder[Url]
           .widen[ExternalCredentialSource] <+> deriveDecoder[File]
+          .widen[ExternalCredentialSource] <+> implicitly[Decoder[Aws]]
           .widen[ExternalCredentialSource]
       case class Url(
           url: String,
@@ -123,6 +127,21 @@ object CredentialsFile {
           file: String,
           format: Option[ExternalCredentialUrlFormat],
       ) extends ExternalCredentialSource
+      case class Aws(
+          environment_id: String,
+      ) extends ExternalCredentialSource
+      object Aws {
+        // Aws credentials file MUST contain environment_id starting with `aws`
+        // See https://github.com/googleapis/google-auth-library-java/blob/ab872812d0f6e9ad7598ba4c4c503d5bff6c2a2b/oauth2_http/java/com/google/auth/oauth2/ExternalAccountCredentials.java#L422
+        implicit val ev: Decoder[Aws] =
+          Decoder.forProduct1[String, String]("environment_id")(identity).flatMap {
+            case value if value.startsWith("aws") => Decoder.const(Aws(value))
+            case other =>
+              Decoder.failedWithMessage(
+                s"environment id must starts with `aws`, but get $other",
+              )
+          }
+      }
       // AWS external source implementation example https://github.com/googleapis/google-auth-library-nodejs/blob/4bbd13fbf9081e004209d0ffc336648cff0c529e/src/auth/awsclient.ts
     }
 
