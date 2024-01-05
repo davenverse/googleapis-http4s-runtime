@@ -57,6 +57,8 @@ object GoogleOAuth2TokenExchange {
         externalAccount.credential_source match {
           case Url(url, headers, format) => subjectTokenFromUrl(client, url, headers, format)
           case File(file, format) => subjectTokenFromFile(file, format)
+          case Aws(_, _, _, _, _) =>
+            throw new NotImplementedError("AWS credential source is not implemented yet.")
         }
       def stsToken(
           sbjToken: String,
@@ -64,7 +66,7 @@ object GoogleOAuth2TokenExchange {
       ): F[AccessToken] = {
         val scopes =
           externalAccount.service_account_impersonation_url.fold(externalAccount.scopes)(_ =>
-            Seq("https://www.googleapis.com/auth/cloud-platform"),
+            Some(Seq("https://www.googleapis.com/auth/cloud-platform")),
           )
         val req = Request[F](uri = Uri.unsafeFromString(externalAccount.token_url))
           .withEntity(
