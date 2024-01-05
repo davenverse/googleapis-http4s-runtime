@@ -29,6 +29,7 @@ sealed abstract class AccessToken private {
   def token: String
   def expiresAt: FiniteDuration
   private[auth] def withToken(token: String): AccessToken
+  private[auth] def headerValue = Credentials.Token(AuthScheme.Bearer, token)
 }
 
 object AccessToken {

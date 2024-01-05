@@ -19,55 +19,49 @@ package googleapis.runtime.auth
 
 import cats.effect.Concurrent
 import cats.effect.Temporal
-import cats.syntax.all._
-import fs2.io.file.Files
-import fs2.io.file.Path
+
 import io.circe.Decoder
 import io.circe.Json
 import io.circe.JsonObject
 import io.circe.generic.semiauto.deriveDecoder
-import io.circe.parser
 import org.http4s.circe.jsonEncoderOf
 import org.http4s.circe.jsonOf
-import org.http4s.headers.Authorization
+import googleapis.runtime.auth.CredentialsFile.ExternalAccount
 
-import CredentialsFile.ExternalAccount.ExternalCredentialSource._
-import CredentialsFile.ExternalAccount.ExternalCredentialUrlFormat
-import CredentialsFile.ExternalAccount.ExternalCredentialUrlFormat.{Json => JsonFmt}
-import CredentialsFile.ExternalAccount.ExternalCredentialUrlFormat.Text
 import client.Client
 trait GoogleOAuth2TokenExchange[F[_]] {
-  def subjectToken(externalAccount: CredentialsFile.ExternalAccount): F[String]
 
   /** Exchanges the external credential for a Google Cloud access token.
+    * @param subjectToken
+    *   retrieved external credentials
+    * @param scopes
+    *   a list of OAuth scopes that specify the desired scopes of the requested security token
+    *   in the context of the service or resource where the token should be used. If service
+    *   account impersonation is used, the cloud platform or IAM scope should be passed.
+    * @param requestOverride
+    *   A hack to support Secure Token Service that requires dedicated handling. For example,
+    *   AWS STS requires `x-goog-cloud-endpoint` header.
     * @return
     *   the access token returned by the Security Token Service
     */
   def stsToken(
-      sbjToken: String,
-      externalAccount: CredentialsFile.ExternalAccount,
+      subjectToken: String,
+      externalAccount: ExternalAccount,
+      scopes: Seq[String],
+      requestOverride: Request[F] => Request[F] = identity,
   ): F[AccessToken]
 }
 
 object GoogleOAuth2TokenExchange {
-  def apply[F[_]: Files: Temporal](client: Client[F]) =
+  def apply[F[_]: Temporal](client: Client[F]) =
     new GoogleOAuth2TokenExchange[F] {
       private val je: EntityEncoder[F, JsonObject] = jsonEncoderOf[F, JsonObject]
-      def subjectToken(externalAccount: CredentialsFile.ExternalAccount): F[String] =
-        externalAccount.credential_source match {
-          case Url(url, headers, format) => subjectTokenFromUrl(client, url, headers, format)
-          case File(file, format) => subjectTokenFromFile(file, format)
-          case Aws(_, _, _, _, _) =>
-            throw new NotImplementedError("AWS credential source is not implemented yet.")
-        }
       def stsToken(
-          sbjToken: String,
-          externalAccount: CredentialsFile.ExternalAccount,
+          subjectToken: String,
+          externalAccount: ExternalAccount,
+          scopes: Seq[String],
+          requestOverride: Request[F] => Request[F] = identity,
       ): F[AccessToken] = {
-        val scopes =
-          externalAccount.service_account_impersonation_url.fold(externalAccount.scopes)(_ =>
-            Some(Seq("https://www.googleapis.com/auth/cloud-platform")),
-          )
         val req = Request[F](uri = Uri.unsafeFromString(externalAccount.token_url))
           .withEntity(
             JsonObject(
@@ -79,63 +73,13 @@ object GoogleOAuth2TokenExchange {
                 "urn:ietf:params:oauth:token-type:access_token",
               ),
               "subject_token_type" -> Json.fromString(externalAccount.subject_token_type),
-              "subject_token" -> Json.fromString(sbjToken),
+              "subject_token" -> Json.fromString(subjectToken),
               "scope" -> Json.fromString(scopes.mkString(" ")),
             ),
           )(je)
-        val stsTkn = client.expect[AccessToken](req)
-
-        externalAccount.service_account_impersonation_url match {
-          case None => stsTkn
-          case Some(url) =>
-            val req = Request[F]()
-              .withUri(Uri.unsafeFromString(url))
-              .withMethod(Method.POST)
-              .withEntity(
-                JsonObject(
-                  "scopes" -> Json.fromString(externalAccount.scopes.mkString(",")),
-                ),
-              )(je)
-            val bearer = (tkn: AccessToken) => Credentials.Token(AuthScheme.Bearer, tkn.token)
-            for {
-              tkn <- stsTkn
-              iamTkn <- client.expect[IamCredentialsTokenResponse](
-                req.withHeaders(Authorization(bearer(tkn))),
-              )
-
-            } yield tkn.withToken(iamTkn.accessToken)
-        }
+        client.expect[AccessToken](requestOverride(req))
       }
     }
-  private def subjectTokenFromUrl[F[_]](
-      client: Client[F],
-      url: String,
-      headers: Option[Map[String, String]],
-      format: Option[ExternalCredentialUrlFormat],
-  )(implicit F: Concurrent[F]) = {
-    val headerList = headers.getOrElse(Map.empty).toList
-    val hs = Headers(headerList)
-    val uri = Uri.unsafeFromString(url)
-    val req = Request[F](uri = uri).putHeaders(hs)
-    format match {
-      case None | Some(Text) => client.expect[String](req)
-      case Some(JsonFmt(subjectTokenFieldName)) =>
-        val dec = Decoder.forProduct1[String, String](subjectTokenFieldName)(identity)
-        client.expect[String](req)(jsonOf(F, dec))
-    }
-  }
-  private def subjectTokenFromFile[F[_]: Files](
-      file: String,
-      format: Option[ExternalCredentialUrlFormat],
-  )(implicit F: Concurrent[F]) = for {
-    tokenOrJson <- Files[F].readUtf8(Path(file)).compile.string
-    tkn <- format match {
-      case None | Some(Text) => F.pure(tokenOrJson)
-      case Some(JsonFmt(subjectTokenFieldName)) =>
-        val dec = Decoder.forProduct1[String, String](subjectTokenFieldName)(identity)
-        F.fromEither(parser.parse(tokenOrJson).flatMap(dec.decodeJson(_)))
-    }
-  } yield tkn
 }
 
 /** @param accessToken
@@ -148,7 +92,7 @@ private[auth] case class IamCredentialsTokenResponse(
     expireTime: String,
 )
 
-object IamCredentialsTokenResponse {
+private[auth] object IamCredentialsTokenResponse {
   implicit def ed[F[_]: Concurrent]: EntityDecoder[F, IamCredentialsTokenResponse] =
     jsonOf[F, IamCredentialsTokenResponse]
   implicit val ev: Decoder[IamCredentialsTokenResponse] = deriveDecoder

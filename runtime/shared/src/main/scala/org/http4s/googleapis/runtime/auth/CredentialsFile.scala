@@ -76,9 +76,12 @@ object CredentialsFile {
 
   /** @param audience
     *   the Security Token Service audience, which is usually the fully specified resource name
-    *   of the workload/workforce pool provider
+    *   of the workload/workforce pool provider. This value exists for any credential source.
+    * @param subject_token_type
+    *   This value exists for any credential source.
     * @param token_url
-    *   the Security Token Service token exchange endpoint
+    *   the Security Token Service token exchange endpoint. This value exists for any credential
+    *   source.
     * @param token_info_url
     *   the endpoint used to retrieve account related information. Required for gCloud session
     *   account identification.
@@ -90,7 +93,7 @@ object CredentialsFile {
     *   the project used for quota and billing purposes.
     * @param credential_source
     *   This determines the source to obtain subject token. The value is either Url or File to
-    *   get subject token from.
+    *   get subject token from. This field helps detect the identity provider to use.
     * @param scopes
     *   the scopes to request during the authorization grant.
     */
@@ -114,10 +117,16 @@ object CredentialsFile {
     // #[serde(untagged)]
     object ExternalCredentialSource {
       implicit val ev: Decoder[ExternalCredentialSource] =
-        deriveDecoder[Url]
-          .widen[ExternalCredentialSource] <+> deriveDecoder[File]
-          .widen[ExternalCredentialSource] <+> implicitly[Decoder[Aws]]
-          .widen[ExternalCredentialSource]
+        // > This(file) should take precedence over url when both are provided.
+        deriveDecoder[File]
+          .widen[ExternalCredentialSource] <+>
+          deriveDecoder[Url]
+            .widen[ExternalCredentialSource] <+> implicitly[Decoder[Aws]]
+            .widen[ExternalCredentialSource]
+
+      /** @param url
+        *   a url to obtain subject token from
+        */
       case class Url(
           url: String,
           headers: Option[Map[String, String /*SecretValue*/ ]],
