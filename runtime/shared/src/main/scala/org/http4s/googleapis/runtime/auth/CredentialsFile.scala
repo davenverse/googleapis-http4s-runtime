@@ -155,7 +155,7 @@ object CredentialsFile {
       implicit val ev: Decoder[ExternalCredentialUrlFormat] =
         Decoder
           .withReattempt(cursor =>
-            cursor.downField("type").as[String] match {
+            cursor.downField("type").as[String].map(_.toLowerCase()) match {
               case Right("json") =>
                 cursor.downField("subject_token_field_name").as[String].map(Json(_))
               case Right("text") => Right(Text)
