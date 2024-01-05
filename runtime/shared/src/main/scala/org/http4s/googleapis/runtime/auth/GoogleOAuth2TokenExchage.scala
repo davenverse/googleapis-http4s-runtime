@@ -17,17 +17,12 @@
 package org.http4s
 package googleapis.runtime.auth
 
-import cats.effect.Concurrent
 import cats.effect.Temporal
-
-import io.circe.Decoder
 import io.circe.Json
 import io.circe.JsonObject
-import io.circe.generic.semiauto.deriveDecoder
 import org.http4s.circe.jsonEncoderOf
-import org.http4s.circe.jsonOf
-import googleapis.runtime.auth.CredentialsFile.ExternalAccount
 
+import googleapis.runtime.auth.CredentialsFile.ExternalAccount
 import client.Client
 trait GoogleOAuth2TokenExchange[F[_]] {
 
@@ -80,20 +75,4 @@ object GoogleOAuth2TokenExchange {
         client.expect[AccessToken](requestOverride(req))
       }
     }
-}
-
-/** @param accessToken
-  *   access token
-  * @param expireTime
-  *   DateTime string in utc
-  */
-private[auth] case class IamCredentialsTokenResponse(
-    accessToken: String, // SecretValue,
-    expireTime: String,
-)
-
-private[auth] object IamCredentialsTokenResponse {
-  implicit def ed[F[_]: Concurrent]: EntityDecoder[F, IamCredentialsTokenResponse] =
-    jsonOf[F, IamCredentialsTokenResponse]
-  implicit val ev: Decoder[IamCredentialsTokenResponse] = deriveDecoder
 }

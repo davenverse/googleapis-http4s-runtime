@@ -29,6 +29,11 @@ import CredentialsFile.ExternalAccount.ExternalCredentialSource
 import fs2.io.file.Files
 import fs2.io.file.Path
 import fs2.io.IOException
+import cats.effect.Concurrent
+
+import io.circe.Decoder
+import io.circe.generic.semiauto.deriveDecoder
+import org.http4s.circe.jsonOf
 
 object IdentityPoolCredentials
     extends ExternalAccountSubjectTokenProvider
@@ -246,4 +251,20 @@ object IdentityPoolCredentials
           iamTkn <- client.expect[IamCredentialsTokenResponse](req)
         } yield stsTkn.withToken(iamTkn.accessToken)
     }
+}
+
+/** @param accessToken
+  *   access token
+  * @param expireTime
+  *   DateTime string in utc
+  */
+private case class IamCredentialsTokenResponse(
+    accessToken: String, // SecretValue,
+    expireTime: String,
+)
+
+private object IamCredentialsTokenResponse {
+  implicit def ed[F[_]: Concurrent]: EntityDecoder[F, IamCredentialsTokenResponse] =
+    jsonOf[F, IamCredentialsTokenResponse]
+  implicit val ev: Decoder[IamCredentialsTokenResponse] = deriveDecoder
 }
