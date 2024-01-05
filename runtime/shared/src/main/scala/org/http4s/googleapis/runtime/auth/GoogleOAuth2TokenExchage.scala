@@ -38,6 +38,11 @@ import CredentialsFile.ExternalAccount.ExternalCredentialUrlFormat.Text
 import client.Client
 trait GoogleOAuth2TokenExchange[F[_]] {
   def subjectToken(externalAccount: CredentialsFile.ExternalAccount): F[String]
+
+  /** Exchanges the external credential for a Google Cloud access token.
+    * @return
+    *   the access token returned by the Security Token Service
+    */
   def stsToken(
       sbjToken: String,
       externalAccount: CredentialsFile.ExternalAccount,
