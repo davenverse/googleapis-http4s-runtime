@@ -128,19 +128,39 @@ object CredentialsFile {
           format: Option[ExternalCredentialUrlFormat],
       ) extends ExternalCredentialSource
       case class Aws(
+          regional_cred_verification_url: String,
           environment_id: String,
+          region_url: Option[String],
+          url: Option[String],
+          imdsv2_session_token_url: Option[String],
       ) extends ExternalCredentialSource
       object Aws {
         // Aws credentials file MUST contain environment_id starting with `aws`
         // See https://github.com/googleapis/google-auth-library-java/blob/ab872812d0f6e9ad7598ba4c4c503d5bff6c2a2b/oauth2_http/java/com/google/auth/oauth2/ExternalAccountCredentials.java#L422
         implicit val ev: Decoder[Aws] =
-          Decoder.forProduct1[String, String]("environment_id")(identity).flatMap {
-            case value if value.startsWith("aws") => Decoder.const(Aws(value))
-            case other =>
-              Decoder.failedWithMessage(
-                s"environment id must starts with `aws`, but get $other",
-              )
-          }
+          Decoder
+            .forProduct5[
+              (String, String, Option[String], Option[String], Option[String]),
+              String,
+              String,
+              Option[String],
+              Option[String],
+              Option[String],
+            ](
+              "regional_cred_verification_url",
+              "environment_id",
+              "region_url",
+              "url",
+              "imdsv2_session_token_url",
+            )(identity((_, _, _, _, _)))
+            .flatMap {
+              case (r_cred_v_url, eid, region_url, url, i_s_t_url) if eid.startsWith("aws") =>
+                Decoder.const(Aws(r_cred_v_url, eid, region_url, url, i_s_t_url))
+              case other =>
+                Decoder.failedWithMessage(
+                  s"Invalid AWS environment ID. AWS environment id must starts with `aws`, but get $other",
+                )
+            }
       }
       // AWS external source implementation example https://github.com/googleapis/google-auth-library-nodejs/blob/4bbd13fbf9081e004209d0ffc336648cff0c529e/src/auth/awsclient.ts
     }
