@@ -44,15 +44,23 @@ object CredentialsFile {
     deriveDecoder[ServiceAccount].widen[CredentialsFile] <+> deriveDecoder[User]
       .widen[CredentialsFile] <+> deriveDecoder[ExternalAccount].widen[CredentialsFile]
     /** service account credentials file containing __sensitive__ private key.
+      *
+      * @param client_id
+      *   Client id of the service account
+      * @param client_email
+      *   Client email address of the service account
+      * @param private_key_id
+      *   Private key identifier for the service account
+      * @param scopes
+      *   Scope strings for the APIs to be called.
       */
   final case class ServiceAccount(
       project_id: String,
       client_email: String,
       private val private_key_id: String,
       private[auth] val private_key: String, // SecretValue,
-      private val token_url: String,
-      // #[serde(skip)]
-      scopes: Seq[String],
+      private val token_uri: Option[String],
+      scopes: Option[Seq[String]],
       quota_project_id: Option[String],
   ) extends CredentialsFile
 
@@ -66,20 +74,36 @@ object CredentialsFile {
       `type`: String,
   ) extends CredentialsFile
 
-  /** @param credential_source
+  /** @param audience
+    *   the Security Token Service audience, which is usually the fully specified resource name
+    *   of the workload/workforce pool provider
+    * @param token_url
+    *   the Security Token Service token exchange endpoint
+    * @param token_info_url
+    *   the endpoint used to retrieve account related information. Required for gCloud session
+    *   account identification.
+    * @param service_account_impersonation_url
+    *   the URL for the service account impersonation request. This URL is required for some
+    *   APIs. If this URL is not available, the access token from the Security Token Service is
+    *   used directly. May be null.
+    * @param quota_project_id
+    *   the project used for quota and billing purposes.
+    * @param credential_source
     *   This determines the source to obtain subject token. The value is either Url or File to
     *   get subject token from.
+    * @param scopes
+    *   the scopes to request during the authorization grant.
     */
   final case class ExternalAccount(
       audience: String,
       subject_token_type: String,
       token_url: String,
+      token_info_url: String,
       service_account_impersonation_url: Option[String],
       service_account_impersonation: Option[ServiceAccountImpersonationSettings],
       quota_project_id: Option[String],
       credential_source: ExternalAccount.ExternalCredentialSource,
-      // #[serde(skip)]
-      scopes: Seq[String],
+      scopes: Option[Seq[String]],
   ) extends CredentialsFile
 
   object ExternalAccount {
