@@ -63,6 +63,7 @@ object CredentialsFile {
       client_id: String,
       private val refresh_token: String, // SecretValue,
       quota_project_id: Option[String],
+      `type`: String,
   ) extends CredentialsFile
 
   /** @param credential_source
