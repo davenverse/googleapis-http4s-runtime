@@ -17,9 +17,9 @@
 package org.http4s
 package googleapis.runtime.auth
 import io.circe.Json
+import client.Client
 import io.circe.syntax._
 import io.circe.Printer
-import io.circe.Decoder
 import cats.Applicative
 private[auth] trait AwsSubjectTokenProvider {
 
@@ -68,6 +68,7 @@ private[auth] trait AwsSubjectTokenProvider {
     ),
   )
   private[auth] def retrieveSubjectTokenForAWS[F[_]](
+      client: Client[F],
       audience: String,
       r_cred_verification_url: Uri,
   )(implicit F: Applicative[F]): F[String] = {
@@ -81,27 +82,4 @@ private[auth] trait AwsSubjectTokenProvider {
       Printer.noSpaces.print(json),
     )
   }
-}
-
-/** Interface defining the AWS security-credentials endpoint response.
-  */
-private case class AwsSecurityCredentials(
-    Code: String,
-    LastUpdated: String,
-    Type: String,
-    AccessKeyId: String,
-    SecretAccessKey: String,
-    Token: String,
-    Expiration: String,
-)
-private object AwsSecurityCredentials {
-  implicit val ev: Decoder[AwsSecurityCredentials] = Decoder.forProduct7(
-    "Code",
-    "LastUpdated",
-    "Type",
-    "AccessKeyId",
-    "SecretAccessKey",
-    "Token",
-    "Expiration",
-  )(AwsSecurityCredentials(_, _, _, _, _, _, _))
 }
