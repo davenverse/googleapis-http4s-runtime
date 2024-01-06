@@ -208,4 +208,3 @@ object IdentityPoolCredentials extends ExternalAccountSubjectTokenProvider {
       scopes,
     )
 }
-
