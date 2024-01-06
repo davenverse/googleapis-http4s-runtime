@@ -191,7 +191,7 @@ object CredentialsFile {
               case Right(value) =>
                 Left(
                   io.circe.DecodingFailure(
-                    s"Unexpected descriminator value `type`=$value for ExternalCredentialUrlFormat",
+                    s"Unexpected discriminator value `type`=$value for ExternalCredentialUrlFormat",
                     cursor.history,
                   ),
                 )

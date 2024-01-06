@@ -16,12 +16,15 @@
 
 package org.http4s
 package googleapis.runtime.auth
-import client.Client
-import org.http4s.googleapis.runtime.auth.CredentialsFile
-import fs2.io.file.Files
 import cats.effect.Temporal
 import cats.syntax.all._
+import fs2.io.IOException
+import fs2.io.file.Files
+import org.http4s.googleapis.runtime.auth.CredentialsFile
 import org.http4s.googleapis.runtime.auth.CredentialsFile.ExternalAccount.ExternalCredentialSource
+
+import client.Client
+import cats.effect.std.Env
 
 /** External account credentials(A.K.A Workload Identity Federation) implementation to access
   * Google cloud resources from non-Google cloud platforms.
@@ -37,7 +40,7 @@ object ExternalAccountCredentials {
     *
     *   - IdentityPoolCredentials with and without service account impersonation from file or
     *     url source
-    *   - AwsCredentials
+    *   - AwsCredentials with service account impersonation
     *   - Plug-ableAuthCredentials
     *
     * @param externalAccount
@@ -46,7 +49,7 @@ object ExternalAccountCredentials {
     *   optional scope override. When it is empty, it uses scopes in credentials configuration
     *   file or fallbacks to `DEFAULT_SCOPES`.
     */
-  def apply[F[_]: Files](
+  def apply[F[_]: Files: Env](
       client: Client[F],
       externalAccount: CredentialsFile.ExternalAccount,
       scopes: Option[Seq[String]] = None,
@@ -64,8 +67,12 @@ object ExternalAccountCredentials {
       )
       // > check `credentials_source` to determine the necessary logic to retrieve the external credential
       credentials <-
-        externalAccount.credential_source match {
-          case (f: ExternalCredentialSource.File) =>
+        (externalAccount.credential_source, impersonationURL) match {
+          case (_: ExternalCredentialSource.Aws, None) =>
+            F.raiseError(
+              new IOException("AWS credentials need service_account_impersonation_url"),
+            )
+          case (f: ExternalCredentialSource.File, impersonationURL) =>
             IdentityPoolCredentials.fromFile(
               client,
               id,
@@ -74,7 +81,7 @@ object ExternalAccountCredentials {
               externalAccount,
               theScopes,
             )
-          case (u: ExternalCredentialSource.Url) =>
+          case (u: ExternalCredentialSource.Url, impersonationURL) =>
             IdentityPoolCredentials.fromURL(
               client,
               id,
@@ -83,8 +90,8 @@ object ExternalAccountCredentials {
               externalAccount,
               theScopes,
             )
-          case (aws: ExternalCredentialSource.Aws) =>
-            IdentityPoolCredentials.forAWS(
+          case (aws: ExternalCredentialSource.Aws, Some(impersonationURL)) =>
+            AwsCredentials(
               client,
               id,
               impersonationURL,

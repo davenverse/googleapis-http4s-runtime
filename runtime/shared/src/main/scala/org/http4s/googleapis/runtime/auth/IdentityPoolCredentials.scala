@@ -21,25 +21,12 @@ import cats.effect.Temporal
 import cats.syntax.all._
 
 import client.Client
-import io.circe.JsonObject
-import io.circe.Json
-import org.http4s.circe.jsonEncoderOf
-import org.http4s.headers.Authorization
 import CredentialsFile.ExternalAccount.ExternalCredentialSource
 import fs2.io.file.Files
 import fs2.io.file.Path
 import fs2.io.IOException
-import cats.effect.Concurrent
 
-import io.circe.Decoder
-import io.circe.generic.semiauto.deriveDecoder
-import org.http4s.circe.jsonOf
-
-object IdentityPoolCredentials
-    extends ExternalAccountSubjectTokenProvider
-    with AwsSubjectTokenProvider {
-  private final val PLATFORM_SCOPES = Seq("https://www.googleapis.com/auth/cloud-platform")
-  // private final val IAM_SCOPES = Seq("https://www.googleapis.com/auth/iam")
+object IdentityPoolCredentials extends ExternalAccountSubjectTokenProvider {
 
   /** Create Google credentials from local file. The main use-case of this credentials is
     * Workload Identity Federation. This function may fail when no file is found at file source.
@@ -71,15 +58,6 @@ object IdentityPoolCredentials
     case (u, Some(url)) => withImpersonation(client, projectId, url, u, externalAccount, scopes)
     case (u, None) => withoutImpersonation(client, projectId, u, externalAccount, scopes)
   }
-
-  private[auth] def forAWS[F[_]](
-      client: Client[F],
-      projectId: String,
-      impersonationURL: Option[Uri],
-      urlSource: ExternalCredentialSource.Aws,
-      externalAccount: CredentialsFile.ExternalAccount,
-      scopes: Seq[String],
-  )(implicit F: Temporal[F]): F[GoogleCredentials[F]] = ???
 
   private def withoutImpersonation[F[_]: Files](
       client: Client[F],
@@ -221,50 +199,13 @@ object IdentityPoolCredentials
       externalAccount: CredentialsFile.ExternalAccount,
       scopes: Seq[String],
   )(implicit F: Temporal[F]): F[GoogleCredentials[F]] =
-    for {
-      // TODO: implement cache logic
-      _ <- F.ref(Option.empty[AccessToken])
-    } yield new GoogleCredentials[F] {
-      def projectId: String = id
-      def get: F[AccessToken] =
-        for {
-          sbjTkn <- retrieveSubjectToken
-          // > If service account impersonation is used, the cloud platform or IAM scope should be passed to STS
-          stsTkn <- GoogleOAuth2TokenExchange[F](client).stsToken(
-            sbjTkn,
-            externalAccount,
-            PLATFORM_SCOPES,
-          )
-          // TODO: use service_account_impersonation.token_lifetime_seconds to set token cache life cycle
-
-          // > and then customer provided scopes should be passed in the IamCredentials call
-          req = Request[F]()
-            .withMethod(Method.POST)
-            .withHeaders(Authorization(stsTkn.headerValue))
-            .withUri(impersonationURL)
-            .withEntity(
-              JsonObject(
-                "scopes" -> Json
-                  .fromString(scopes.mkString(",")),
-              ), // If there's service_account_impersonation.token_lifetime_seconds, it needs to be passed here.
-            )(jsonEncoderOf[F, JsonObject])
-          iamTkn <- client.expect[IamCredentialsTokenResponse](req)
-        } yield stsTkn.withToken(iamTkn.accessToken)
-    }
+    ImpersonatedCredentials(
+      client,
+      id,
+      impersonationURL,
+      retrieveSubjectToken,
+      externalAccount,
+      scopes,
+    )
 }
 
-/** @param accessToken
-  *   access token
-  * @param expireTime
-  *   DateTime string in utc
-  */
-private case class IamCredentialsTokenResponse(
-    accessToken: String, // SecretValue,
-    expireTime: String,
-)
-
-private object IamCredentialsTokenResponse {
-  implicit def ed[F[_]: Concurrent]: EntityDecoder[F, IamCredentialsTokenResponse] =
-    jsonOf[F, IamCredentialsTokenResponse]
-  implicit val ev: Decoder[IamCredentialsTokenResponse] = deriveDecoder
-}

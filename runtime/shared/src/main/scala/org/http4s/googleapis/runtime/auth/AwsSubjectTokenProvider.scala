@@ -2,7 +2,9 @@ package org.http4s
 package googleapis.runtime.auth
 import io.circe.Json
 import io.circe.syntax._
+import io.circe.Printer
 import io.circe.Decoder
+import cats.Applicative
 private[auth] trait AwsSubjectTokenProvider {
 
   // The spec says
@@ -49,14 +51,20 @@ private[auth] trait AwsSubjectTokenProvider {
       ),
     ),
   )
-  private[auth] def retrieveSubjectTokenForAWS[F[_]]: F[String] =
+  private[auth] def retrieveSubjectTokenForAWS[F[_]](
+      audience: String,
+      r_cred_verification_url: Uri,
+  )(implicit F: Applicative[F]): F[String] = {
     // memonize AwsRequestSigner
     // getAwsRoleName
     // getAwsSecurityCredentials
     // Generate signed request to AWS STS GetCallerIdentity API.
-    // val json = mkSbjTkn
-    // encodeURIComponent(printer.noSpaces(json))
-    ???
+    val json = mkSbjTkn(???, audience)
+    // encodeURIComponent and then
+    F.pure(
+      Printer.noSpaces.print(json),
+    )
+  }
 }
 
 /** Interface defining the AWS security-credentials endpoint response.
