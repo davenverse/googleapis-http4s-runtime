@@ -19,7 +19,7 @@ package googleapis.runtime.auth
 
 import scodec.bits.ByteVector
 
-trait OAuth2[F[_]] {
+trait GoogleOAuth2JwtBearer[F[_]] {
   def getAccessToken(
       clientEmail: String,
       privateKey: ByteVector,

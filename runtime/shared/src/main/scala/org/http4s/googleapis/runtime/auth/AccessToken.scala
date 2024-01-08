@@ -30,6 +30,7 @@ import scala.concurrent.duration._
 sealed abstract class AccessToken private {
   def token: String
   def expiresAt: FiniteDuration
+  private[auth] def headerValue = Credentials.Token(AuthScheme.Bearer, token)
   def expiresSoon[F[_]: Functor: Clock](in: FiniteDuration = 1.minute): F[Boolean] =
     Clock[F].realTime.map(now => expiresAt < now + in)
 }
