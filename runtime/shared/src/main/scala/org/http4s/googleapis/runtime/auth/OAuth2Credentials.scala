@@ -25,6 +25,7 @@ import org.http4s.googleapis.runtime.auth.CredentialsFile.User
 
 import scala.annotation.nowarn
 
+import fs2.io.file.Files
 import client.Client
 
 object Oauth2Credentials {
@@ -47,13 +48,13 @@ object Oauth2Credentials {
     *   Determine auth flows) and block 5(Execute auth flows)
     */
   @nowarn
-  def apply[F[_]](
+  def apply[F[_]: Files](
       client: Client[F],
       credentialsFile: CredentialsFile,
       scopesOverride: Option[Seq[String]] = None,
       quotaProjectOverride: Option[String] = None,
   )(implicit F: Temporal[F]): F[GoogleCredentials[F]] = {
-    val _ = scopesOverride.getOrElse(DEFAULT_SCOPES)
+    val scopes = scopesOverride.getOrElse(DEFAULT_SCOPES)
 
     credentialsFile match {
       case _: User =>
@@ -67,12 +68,10 @@ object Oauth2Credentials {
         F.raiseError(
           new NotImplementedError("ServiceAccount credentials auth is not implemented"),
         )
-      case _: ExternalAccount =>
+      case ea: ExternalAccount =>
         // external account flow to exchange for an access token
         // https://google.aip.dev/auth/4117
-        F.raiseError(
-          new NotImplementedError("ExternalAccount credentials auth is not implemented"),
-        )
+        ExternalAccountCredentials[F](client, ea, Some(scopes))
     }
   }
 
