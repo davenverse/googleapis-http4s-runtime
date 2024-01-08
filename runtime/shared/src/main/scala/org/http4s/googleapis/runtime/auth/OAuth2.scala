@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 Christopher Davenport
+ * Copyright 2024 Christopher Davenport
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,14 +17,7 @@
 package org.http4s
 package googleapis.runtime.auth
 
-import cats.data.EitherT
-import cats.effect.kernel.Temporal
-import cats.syntax.all._
-import io.circe.Decoder
-import org.http4s.circe.jsonOf
 import scodec.bits.ByteVector
-
-import scala.concurrent.duration._
 
 trait OAuth2[F[_]] {
   def getAccessToken(
