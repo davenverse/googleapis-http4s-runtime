@@ -16,9 +16,9 @@
 
 package org.http4s
 package googleapis.runtime.auth
-import cats.data.OptionT
-import cats.effect.Temporal
 import cats.syntax.all._
+import cats.effect.Temporal
+import cats.data.OptionT
 import org.http4s.googleapis.runtime.auth.CredentialsFile.ExternalAccount
 import org.http4s.googleapis.runtime.auth.CredentialsFile.ServiceAccount
 import org.http4s.googleapis.runtime.auth.CredentialsFile.User
@@ -47,7 +47,6 @@ object Oauth2Credentials {
     *   https://google.aip.dev/auth/4110#expected-behavior block 2(Load credentials), block 4(
     *   Determine auth flows) and block 5(Execute auth flows)
     */
-  @nowarn
   def apply[F[_]: Files](
       client: Client[F],
       credentialsFile: CredentialsFile,
@@ -57,11 +56,27 @@ object Oauth2Credentials {
     val scopes = scopesOverride.getOrElse(DEFAULT_SCOPES)
 
     credentialsFile match {
-      case _: User =>
+      case User(client_secret, client_id, refresh_token, quota_project_id, _) =>
         // user identity flow to exchange for an access token
-        F.raiseError(
-          new NotImplementedError("User credentials auth is not implemented"),
-        )
+        for {
+          // > All the fields are populated by the login response from the Google authorization backend
+          // > except for ‘quota_project_id’ which is retrieved from gcloud’s context
+          // > https://google.aip.dev/auth/4113#credentials-generation
+          pid <- F.fromOption(
+            quotaProjectOverride.orElse(quota_project_id),
+            new Exception(
+              """GCP project id is not found.
+              Make sure your application default credentials contain `quota_project_id`
+              and run `gcloud config set project` if it does not exist.
+              Instead, you can also set quota_project_id via GOOGLE_CLOUD_QUOTA_PROJECT environment variable.""".stripMargin,
+            ),
+          )
+          credentials <- Oauth2Credentials(
+            pid,
+            GoogleOAuth2RefreshToken[F](client)
+              .getAccessToken(client_id, client_secret, refresh_token, scopes),
+          )
+        } yield credentials
       case _: ServiceAccount =>
         // self-signed JWT flow for an access token
         // https://google.aip.dev/auth/4111

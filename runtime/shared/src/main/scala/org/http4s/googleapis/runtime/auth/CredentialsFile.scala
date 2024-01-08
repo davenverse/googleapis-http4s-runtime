@@ -62,16 +62,21 @@ object CredentialsFile {
       private val token_uri: Option[String],
       scopes: Option[Seq[String]],
       quota_project_id: Option[String],
+      `type`: String, // = service_account
   ) extends CredentialsFile
 
-  /** This file contains __sensitive__ oauth2 client secret and refresh token
+  /** This file contains __sensitive__ oauth2 client secret and refresh token.
+    *
+    * @param quota_project_id
+    *   GCP project Id. This value should be added to the ‘X-Goog-User-Project’ http header so
+    *   that the associated account will be charged for billing and quota.
     */
   final case class User(
-      private val client_secret: String, // SecretValue,
+      private[auth] val client_secret: String, // SecretValue,
       client_id: String,
-      private val refresh_token: String, // SecretValue,
+      private[auth] val refresh_token: String, // SecretValue,
       quota_project_id: Option[String],
-      `type`: String,
+      `type`: String, // = `authorized_user`
   ) extends CredentialsFile
 
   /** @param audience
