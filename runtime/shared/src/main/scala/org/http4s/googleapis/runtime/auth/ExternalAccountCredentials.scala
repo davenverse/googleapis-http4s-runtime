@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 Christopher Davenport
+ * Copyright 2024 Yoichiro Ito
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -31,7 +31,6 @@ import client.Client
   *   https://google.aip.dev/auth/4117
   */
 object ExternalAccountCredentials {
-  final val DEFAULT_SCOPES = Seq("https://www.googleapis.com/auth/cloud-platform")
 
   /** Create Google credentials for external account. Internally, ExternalAccountCredentials has
     * the following variants
@@ -44,13 +43,11 @@ object ExternalAccountCredentials {
     * @param externalAccount
     *   credentials file to create ExternalAccountCredentials
     * @param scopes
-    *   optional scope override. When it is empty, it uses scopes in credentials configuration
-    *   file or fallbacks to `DEFAULT_SCOPES`.
     */
   def apply[F[_]: Files](
       client: Client[F],
       externalAccount: CredentialsFile.ExternalAccount,
-      scopes: Option[Seq[String]] = None,
+      scopes: Seq[String],
   )(implicit F: Temporal[F]): F[GoogleCredentials[F]] = {
     val pid: F[String] = externalAccount.quota_project_id match {
       case Some(id) => F.pure(id)
@@ -59,7 +56,6 @@ object ExternalAccountCredentials {
 
     for {
       id <- pid
-      theScopes = scopes.orElse(externalAccount.scopes).getOrElse(DEFAULT_SCOPES)
       impersonationURL <- externalAccount.service_account_impersonation_url.traverse(
         Uri.fromString.andThen(F.fromEither),
       )
@@ -77,7 +73,7 @@ object ExternalAccountCredentials {
               impersonationURL,
               f,
               externalAccount,
-              theScopes,
+              scopes,
             )
           case (u: ExternalCredentialSource.Url, impersonationURL) =>
             IdentityPoolCredentials.fromURL(
@@ -86,7 +82,7 @@ object ExternalAccountCredentials {
               impersonationURL,
               u,
               externalAccount,
-              theScopes,
+              scopes,
             )
           case (_: ExternalCredentialSource.Aws, Some(_)) =>
             F.raiseError(new NotImplementedError("AwsCredentials is not implemented yet."))

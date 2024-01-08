@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 Christopher Davenport
+ * Copyright 2024 Yoichiro Ito
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,8 +22,6 @@ import cats.data.OptionT
 import org.http4s.googleapis.runtime.auth.CredentialsFile.ExternalAccount
 import org.http4s.googleapis.runtime.auth.CredentialsFile.ServiceAccount
 import org.http4s.googleapis.runtime.auth.CredentialsFile.User
-
-import scala.annotation.nowarn
 
 import fs2.io.file.Files
 import client.Client
@@ -52,9 +50,7 @@ object Oauth2Credentials {
       credentialsFile: CredentialsFile,
       scopesOverride: Option[Seq[String]] = None,
       quotaProjectOverride: Option[String] = None,
-  )(implicit F: Temporal[F]): F[GoogleCredentials[F]] = {
-    val scopes = scopesOverride.getOrElse(DEFAULT_SCOPES)
-
+  )(implicit F: Temporal[F]): F[GoogleCredentials[F]] =
     credentialsFile match {
       case User(client_secret, client_id, refresh_token, quota_project_id, _) =>
         // user identity flow to exchange for an access token
@@ -71,6 +67,7 @@ object Oauth2Credentials {
               Instead, you can also set quota_project_id via GOOGLE_CLOUD_QUOTA_PROJECT environment variable.""".stripMargin,
             ),
           )
+          scopes = scopesOverride.getOrElse(DEFAULT_SCOPES)
           credentials <- Oauth2Credentials(
             pid,
             GoogleOAuth2RefreshToken[F](client)
@@ -86,9 +83,12 @@ object Oauth2Credentials {
       case ea: ExternalAccount =>
         // external account flow to exchange for an access token
         // https://google.aip.dev/auth/4117
-        ExternalAccountCredentials[F](client, ea, Some(scopes))
+        ExternalAccountCredentials[F](
+          client,
+          ea,
+          scopesOverride.orElse(ea.scopes).getOrElse(DEFAULT_SCOPES),
+        )
     }
-  }
 
   private[auth] def apply[F[_]](pid: String, refresh: F[AccessToken])(implicit
       F: Temporal[F],
