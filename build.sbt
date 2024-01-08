@@ -1,13 +1,14 @@
 ThisBuild / tlBaseVersion := "0.0"
 
-ThisBuild / organization := "io.chrisdavenport"
-ThisBuild / organizationName := "Christopher Davenport"
+ThisBuild / organization := "dev.i10416"
+ThisBuild / organizationName := "Yoichiro Ito"
 ThisBuild / developers := List(
+  tlGitHubDev("i10416", "Yoichiro Ito"),
   tlGitHubDev("christopherdavenport", "Christopher Davenport"),
   tlGitHubDev("armanbilge", "Arman Bilge"),
 )
 ThisBuild / tlCiReleaseBranches := Seq("main")
-ThisBuild / tlSonatypeUseLegacyHost := true
+//ThisBuild / tlSonatypeUseLegacyHost := true
 
 val Scala213 = "2.13.12"
 ThisBuild / crossScalaVersions := Seq(Scala213, "3.3.1")

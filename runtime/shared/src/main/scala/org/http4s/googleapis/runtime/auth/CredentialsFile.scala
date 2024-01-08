@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 Christopher Davenport
+ * Copyright 2024 Yoichiro Ito
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -119,7 +119,6 @@ object CredentialsFile {
     /** Base credential source class. Dictates the retrieval method of the external credential.
       */
     sealed trait ExternalCredentialSource
-    // #[serde(untagged)]
     object ExternalCredentialSource {
       implicit val ev: Decoder[ExternalCredentialSource] =
         // > This(file) should take precedence over url when both are provided.
@@ -176,7 +175,6 @@ object CredentialsFile {
                 )
             }
       }
-      // AWS external source implementation example https://github.com/googleapis/google-auth-library-nodejs/blob/4bbd13fbf9081e004209d0ffc336648cff0c529e/src/auth/awsclient.ts
     }
 
     /** Internally tagged union of the following two variants;
