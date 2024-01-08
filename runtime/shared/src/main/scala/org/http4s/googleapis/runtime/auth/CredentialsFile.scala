@@ -114,7 +114,6 @@ object CredentialsFile {
     /** Base credential source class. Dictates the retrieval method of the external credential.
       */
     sealed trait ExternalCredentialSource
-    // #[serde(untagged)]
     object ExternalCredentialSource {
       implicit val ev: Decoder[ExternalCredentialSource] =
         // > This(file) should take precedence over url when both are provided.
@@ -171,7 +170,6 @@ object CredentialsFile {
                 )
             }
       }
-      // AWS external source implementation example https://github.com/googleapis/google-auth-library-nodejs/blob/4bbd13fbf9081e004209d0ffc336648cff0c529e/src/auth/awsclient.ts
     }
 
     /** Internally tagged union of the following two variants;
