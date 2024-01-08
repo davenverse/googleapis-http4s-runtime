@@ -53,36 +53,32 @@ object ImpersonatedCredentials {
       externalAccount: CredentialsFile.ExternalAccount,
       scopes: Seq[String],
   )(implicit F: Temporal[F]): F[GoogleCredentials[F]] =
-    for {
-      // TODO: implement cache logic
-      _ <- F.ref(Option.empty[AccessToken])
-    } yield new GoogleCredentials[F] {
-      def projectId: String = id
-      def get: F[AccessToken] =
-        for {
-          sbjTkn <- retrieveSubjectToken
-          // > If service account impersonation is used, the cloud platform or IAM scope should be passed to STS
-          stsTkn <- GoogleOAuth2TokenExchange[F](client).stsToken(
-            sbjTkn,
-            externalAccount,
-            PLATFORM_SCOPES,
-          )
-          // TODO: use service_account_impersonation.token_lifetime_seconds to set token cache life cycle
+    Oauth2Credentials[F](
+      id,
+      for {
+        sbjTkn <- retrieveSubjectToken
+        // > If service account impersonation is used, the cloud platform or IAM scope should be passed to STS
+        stsTkn <- GoogleOAuth2TokenExchange[F](client).stsToken(
+          sbjTkn,
+          externalAccount,
+          PLATFORM_SCOPES,
+        )
+        // TODO: use service_account_impersonation.token_lifetime_seconds to set token cache life cycle
 
-          // > and then customer provided scopes should be passed in the IamCredentials call
-          req = Request[F]()
-            .withMethod(Method.POST)
-            .withHeaders(Authorization(stsTkn.headerValue))
-            .withUri(impersonationURL)
-            .withEntity(
-              JsonObject(
-                "scopes" -> Json
-                  .fromString(scopes.mkString(",")),
-              ), // If there's service_account_impersonation.token_lifetime_seconds, it needs to be passed here.
-            )(jsonEncoderOf[F, JsonObject])
-          iamTkn <- client.expect[IamCredentialsTokenResponse](req)
-        } yield stsTkn.withToken(iamTkn.accessToken)
-    }
+        // > and then customer provided scopes should be passed in the IamCredentials call
+        req = Request[F]()
+          .withMethod(Method.POST)
+          .withHeaders(Authorization(stsTkn.headerValue))
+          .withUri(impersonationURL)
+          .withEntity(
+            JsonObject(
+              "scopes" -> Json
+                .fromString(scopes.mkString(",")),
+            ), // If there's service_account_impersonation.token_lifetime_seconds, it needs to be passed here.
+          )(jsonEncoderOf[F, JsonObject])
+        iamTkn <- client.expect[IamCredentialsTokenResponse](req)
+      } yield stsTkn.withToken(iamTkn.accessToken),
+    )
 }
 
 /** @param accessToken

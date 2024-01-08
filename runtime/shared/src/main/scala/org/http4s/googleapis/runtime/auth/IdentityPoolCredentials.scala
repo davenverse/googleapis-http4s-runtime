@@ -120,18 +120,16 @@ object IdentityPoolCredentials extends ExternalAccountSubjectTokenProvider {
       retrieveSubjectToken: F[String],
       externalAccount: CredentialsFile.ExternalAccount,
       scopes: Seq[String],
-  )(implicit F: Temporal[F]): F[GoogleCredentials[F]] = for {
-    // TODO: implement cache logic
-    _ <- F.ref(Option.empty[AccessToken])
-  } yield new GoogleCredentials[F] {
-    def projectId: String = pid
-    def get: F[AccessToken] = for {
-      sbjTkn <- retrieveSubjectToken
-      tkn <- GoogleOAuth2TokenExchange[F](client)
-        .stsToken(sbjTkn, externalAccount, scopes)
-      // If impersonation url is not available, end the flow and just use the STS access token for authorization.
-    } yield tkn
-  }
+  )(implicit F: Temporal[F]): F[GoogleCredentials[F]] =
+    Oauth2Credentials[F](
+      pid,
+      for {
+        sbjTkn <- retrieveSubjectToken
+        tkn <- GoogleOAuth2TokenExchange[F](client)
+          .stsToken(sbjTkn, externalAccount, scopes)
+        // If impersonation url is not available, end the flow and just use the STS access token for authorization.
+      } yield tkn,
+    )
 
   private def withImpersonation[F[_]: Files](
       client: Client[F],

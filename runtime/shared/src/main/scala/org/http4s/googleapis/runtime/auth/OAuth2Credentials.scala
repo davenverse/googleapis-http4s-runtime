@@ -75,8 +75,7 @@ object Oauth2Credentials {
     }
   }
 
-  @nowarn
-  private def apply[F[_]](pid: String, refresh: F[AccessToken])(implicit
+  private[auth] def apply[F[_]](pid: String, refresh: F[AccessToken])(implicit
       F: Temporal[F],
   ): F[GoogleCredentials[F]] =
     for {
