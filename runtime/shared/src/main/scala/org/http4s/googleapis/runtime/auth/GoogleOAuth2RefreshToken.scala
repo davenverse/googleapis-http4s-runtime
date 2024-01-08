@@ -17,7 +17,6 @@
 package org.http4s
 package googleapis.runtime.auth
 import cats.effect.Temporal
-
 import client.Client
 import syntax.all._
 
@@ -53,7 +52,7 @@ private[auth] object GoogleOAuth2RefreshToken {
           scopes: Seq[String],
       ): F[AccessToken] =
         client.expect[AccessToken](
-          Request[F](uri = TOKEN_URL).withEntity(
+          Request[F](uri = TOKEN_URL, method = Method.POST).withEntity(
             UrlForm(
               "client_id" -> clientId,
               "client_secret" -> clientSecret,
