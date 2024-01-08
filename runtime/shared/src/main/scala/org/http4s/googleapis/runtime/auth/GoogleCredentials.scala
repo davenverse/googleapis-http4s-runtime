@@ -14,15 +14,9 @@
  * limitations under the License.
  */
 
-package org.http4s
-package googleapis.runtime.auth
+package org.http4s.googleapis.runtime.auth
 
-import scodec.bits.ByteVector
-
-trait OAuth2[F[_]] {
-  def getAccessToken(
-      clientEmail: String,
-      privateKey: ByteVector,
-      scopes: Seq[String],
-  ): F[AccessToken]
+trait GoogleCredentials[F[_]] {
+  def projectId: String
+  def get: F[AccessToken]
 }
