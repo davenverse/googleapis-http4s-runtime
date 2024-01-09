@@ -72,8 +72,8 @@ object ImpersonatedCredentials {
           .withUri(impersonationURL)
           .withEntity(
             JsonObject(
-              "scopes" -> Json
-                .fromString(scopes.mkString(",")),
+              "scope" -> Json
+                .fromString(scopes.mkString(" ")),
             ), // If there's service_account_impersonation.token_lifetime_seconds, it needs to be passed here.
           )(jsonEncoderOf[F, JsonObject])
         iamTkn <- client.expect[IamCredentialsTokenResponse](req)
