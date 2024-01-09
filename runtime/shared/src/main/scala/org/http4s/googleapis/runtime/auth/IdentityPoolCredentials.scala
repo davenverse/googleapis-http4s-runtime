@@ -33,7 +33,7 @@ object IdentityPoolCredentials extends ExternalAccountSubjectTokenProvider {
     */
   private[auth] def fromFile[F[_]: Files](
       client: Client[F],
-      projectId: String,
+      projectId: Option[String],
       impersonationURL: Option[Uri],
       fileSource: ExternalCredentialSource.File,
       externalAccount: CredentialsFile.ExternalAccount,
@@ -49,7 +49,7 @@ object IdentityPoolCredentials extends ExternalAccountSubjectTokenProvider {
     */
   private[auth] def fromURL[F[_]](
       client: Client[F],
-      projectId: String,
+      projectId: Option[String],
       impersonationURL: Option[Uri],
       urlSource: ExternalCredentialSource.Url,
       externalAccount: CredentialsFile.ExternalAccount,
@@ -61,7 +61,7 @@ object IdentityPoolCredentials extends ExternalAccountSubjectTokenProvider {
 
   private def withoutImpersonation[F[_]: Files](
       client: Client[F],
-      pid: String,
+      pid: Option[String],
       fileSource: ExternalCredentialSource.File,
       externalAccount: CredentialsFile.ExternalAccount,
       scopes: Seq[String],
@@ -82,7 +82,7 @@ object IdentityPoolCredentials extends ExternalAccountSubjectTokenProvider {
   }
   private def withoutImpersonation[F[_]](
       client: Client[F],
-      pid: String,
+      pid: Option[String],
       urlSource: ExternalCredentialSource.Url,
       externalAccount: CredentialsFile.ExternalAccount,
       scopes: Seq[String],
@@ -116,7 +116,7 @@ object IdentityPoolCredentials extends ExternalAccountSubjectTokenProvider {
     */
   private def withoutImpersonation[F[_]](
       client: Client[F],
-      pid: String,
+      pid: Option[String],
       retrieveSubjectToken: F[String],
       externalAccount: CredentialsFile.ExternalAccount,
       scopes: Seq[String],
@@ -133,7 +133,7 @@ object IdentityPoolCredentials extends ExternalAccountSubjectTokenProvider {
 
   private def withImpersonation[F[_]: Files](
       client: Client[F],
-      id: String,
+      id: Option[String],
       impersonationURL: Uri,
       fileSource: ExternalCredentialSource.File,
       externalAccount: CredentialsFile.ExternalAccount,
@@ -156,7 +156,7 @@ object IdentityPoolCredentials extends ExternalAccountSubjectTokenProvider {
   }
   private def withImpersonation[F[_]](
       client: Client[F],
-      id: String,
+      id: Option[String],
       impersonationURL: Uri,
       urlSource: ExternalCredentialSource.Url,
       externalAccount: CredentialsFile.ExternalAccount,
@@ -191,7 +191,7 @@ object IdentityPoolCredentials extends ExternalAccountSubjectTokenProvider {
     */
   private def withImpersonation[F[_]](
       client: Client[F],
-      id: String,
+      id: Option[String],
       impersonationURL: Uri,
       retrieveSubjectToken: F[String],
       externalAccount: CredentialsFile.ExternalAccount,

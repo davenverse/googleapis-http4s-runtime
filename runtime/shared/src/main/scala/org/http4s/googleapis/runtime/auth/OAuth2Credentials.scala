@@ -69,7 +69,7 @@ object Oauth2Credentials {
           )
           scopes = scopesOverride.getOrElse(DEFAULT_SCOPES)
           credentials <- Oauth2Credentials(
-            pid,
+            Some(pid),
             GoogleOAuth2RefreshToken[F](client)
               .getAccessToken(client_id, client_secret, refresh_token, scopes),
           )
@@ -90,7 +90,7 @@ object Oauth2Credentials {
         )
     }
 
-  private[auth] def apply[F[_]](pid: String, refresh: F[AccessToken])(implicit
+  private[auth] def apply[F[_]](pid: Option[String], refresh: F[AccessToken])(implicit
       F: Temporal[F],
   ): F[GoogleCredentials[F]] =
     for {

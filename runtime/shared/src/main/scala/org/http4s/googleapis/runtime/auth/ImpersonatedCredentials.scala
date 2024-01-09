@@ -48,7 +48,7 @@ object ImpersonatedCredentials {
     */
   def apply[F[_]](
       client: Client[F],
-      id: String,
+      id: Option[String],
       impersonationURL: Uri,
       retrieveSubjectToken: F[String],
       externalAccount: CredentialsFile.ExternalAccount,
