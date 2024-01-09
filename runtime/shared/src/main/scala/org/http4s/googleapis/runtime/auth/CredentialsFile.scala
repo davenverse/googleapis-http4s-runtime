@@ -106,7 +106,7 @@ object CredentialsFile {
       audience: String,
       subject_token_type: String,
       token_url: String,
-      token_info_url: String,
+      token_info_url: Option[String],
       service_account_impersonation_url: Option[String],
       service_account_impersonation: Option[ServiceAccountImpersonationSettings],
       quota_project_id: Option[String],
