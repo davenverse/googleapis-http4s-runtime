@@ -22,6 +22,8 @@ import cats.data.OptionT
 import org.http4s.googleapis.runtime.auth.CredentialsFile.ExternalAccount
 import org.http4s.googleapis.runtime.auth.CredentialsFile.ServiceAccount
 import org.http4s.googleapis.runtime.auth.CredentialsFile.User
+
+import fs2.io.file.Files
 import client.Client
 
 object Oauth2Credentials {
@@ -43,14 +45,12 @@ object Oauth2Credentials {
     *   https://google.aip.dev/auth/4110#expected-behavior block 2(Load credentials), block 4(
     *   Determine auth flows) and block 5(Execute auth flows)
     */
-  def apply[F[_]](
+  def apply[F[_]: Files](
       client: Client[F],
       credentialsFile: CredentialsFile,
       scopesOverride: Option[Seq[String]] = None,
       quotaProjectOverride: Option[String] = None,
-  )(implicit F: Temporal[F]): F[GoogleCredentials[F]] = {
-    val scopes = scopesOverride.getOrElse(DEFAULT_SCOPES)
-
+  )(implicit F: Temporal[F]): F[GoogleCredentials[F]] =
     credentialsFile match {
       case User(client_secret, client_id, refresh_token, quota_project_id, _) =>
         // user identity flow to exchange for an access token
@@ -67,6 +67,7 @@ object Oauth2Credentials {
               Instead, you can also set quota_project_id via GOOGLE_CLOUD_QUOTA_PROJECT environment variable.""".stripMargin,
             ),
           )
+          scopes = scopesOverride.getOrElse(DEFAULT_SCOPES)
           credentials <- Oauth2Credentials(
             pid,
             GoogleOAuth2RefreshToken[F](client)
@@ -79,16 +80,17 @@ object Oauth2Credentials {
         F.raiseError(
           new NotImplementedError("ServiceAccount credentials auth is not implemented"),
         )
-      case _: ExternalAccount =>
+      case ea: ExternalAccount =>
         // external account flow to exchange for an access token
         // https://google.aip.dev/auth/4117
-        F.raiseError(
-          new NotImplementedError("ExternalAccount credentials auth is not implemented"),
+        ExternalAccountCredentials[F](
+          client,
+          ea,
+          scopesOverride.orElse(ea.scopes).getOrElse(DEFAULT_SCOPES),
         )
     }
-  }
 
-  private def apply[F[_]](pid: String, refresh: F[AccessToken])(implicit
+  private[auth] def apply[F[_]](pid: String, refresh: F[AccessToken])(implicit
       F: Temporal[F],
   ): F[GoogleCredentials[F]] =
     for {

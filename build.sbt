@@ -3,9 +3,9 @@ ThisBuild / tlBaseVersion := "0.0"
 ThisBuild / organization := "dev.i10416"
 ThisBuild / organizationName := "Yoichiro Ito"
 ThisBuild / developers := List(
-  tlGitHubDev("i10416", "Yoichiro Ito"),
   tlGitHubDev("christopherdavenport", "Christopher Davenport"),
   tlGitHubDev("armanbilge", "Arman Bilge"),
+  tlGitHubDev("i10416", "Yoichiro Ito"),
 )
 ThisBuild / tlCiReleaseBranches := Seq("main")
 //ThisBuild / tlSonatypeUseLegacyHost := true
