@@ -51,7 +51,11 @@ object ExternalAccountCredentials {
   )(implicit F: Temporal[F]): F[GoogleCredentials[F]] = {
     val pid: F[String] = externalAccount.quota_project_id match {
       case Some(id) => F.pure(id)
-      case None => ??? // fetch from metadata server?
+      case None =>
+        F.pure(
+          "quota project id for external account is nullable." +
+            "Perhaps, we need change GoogleCredentials#id signature.",
+        )
     }
 
     for {
