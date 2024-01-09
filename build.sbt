@@ -5,6 +5,7 @@ ThisBuild / organizationName := "Christopher Davenport"
 ThisBuild / developers := List(
   tlGitHubDev("christopherdavenport", "Christopher Davenport"),
   tlGitHubDev("armanbilge", "Arman Bilge"),
+  tlGitHubDev("i10416", "Yoichiro Ito"),
 )
 ThisBuild / tlCiReleaseBranches := Seq("main")
 ThisBuild / tlSonatypeUseLegacyHost := true
@@ -16,7 +17,7 @@ ThisBuild / scalaVersion := Scala213
 ThisBuild / githubWorkflowJavaVersions := Seq(JavaSpec.temurin("17"))
 
 val http4sVersion = "0.23.23"
-
+val circeVersion = "0.14.6"
 lazy val root = tlCrossRootProject.aggregate(runtime)
 
 lazy val runtime = crossProject(JVMPlatform, JSPlatform, NativePlatform)
@@ -27,5 +28,8 @@ lazy val runtime = crossProject(JVMPlatform, JSPlatform, NativePlatform)
       "org.typelevel" %%% "cats-effect" % "3.5.2",
       "org.http4s" %%% "http4s-client" % http4sVersion,
       "org.http4s" %%% "http4s-circe" % http4sVersion,
+      "io.circe" %%% "circe-core" % circeVersion,
+      "io.circe" %%% "circe-generic" % circeVersion,
+      "io.circe" %%% "circe-parser" % circeVersion,
     ),
   )
