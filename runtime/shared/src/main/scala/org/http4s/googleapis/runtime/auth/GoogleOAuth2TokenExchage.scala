@@ -24,6 +24,7 @@ import org.http4s.circe.jsonEncoderOf
 
 import googleapis.runtime.auth.CredentialsFile.ExternalAccount
 import client.Client
+import headers.`Content-Type`
 trait GoogleOAuth2TokenExchange[F[_]] {
 
   /** Exchanges the external credential for a Google Cloud access token.
@@ -61,6 +62,9 @@ object GoogleOAuth2TokenExchange {
           uri = Uri.unsafeFromString(externalAccount.token_url),
           method = Method.POST,
         )
+          .withHeaders(
+            `Content-Type`(MediaType.application.json),
+          )
           .withEntity(
             JsonObject(
               "grant_type" -> Json.fromString(

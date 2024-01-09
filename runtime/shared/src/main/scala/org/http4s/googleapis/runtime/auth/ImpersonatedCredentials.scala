@@ -28,6 +28,7 @@ import org.http4s.circe.jsonOf
 
 import client.Client
 import headers.Authorization
+import headers.`Content-Type`
 
 object ImpersonatedCredentials {
   private final val PLATFORM_SCOPES = Seq("https://www.googleapis.com/auth/cloud-platform")
@@ -68,7 +69,10 @@ object ImpersonatedCredentials {
         // > and then customer provided scopes should be passed in the IamCredentials call
         req = Request[F]()
           .withMethod(Method.POST)
-          .withHeaders(Authorization(stsTkn.headerValue))
+          .withHeaders(
+            Authorization(stsTkn.headerValue),
+            `Content-Type`(MediaType.application.json),
+          )
           .withUri(impersonationURL)
           .withEntity(
             JsonObject(
