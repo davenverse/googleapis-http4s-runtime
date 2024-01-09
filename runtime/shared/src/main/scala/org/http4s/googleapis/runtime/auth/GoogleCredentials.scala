@@ -17,6 +17,9 @@
 package org.http4s.googleapis.runtime.auth
 
 trait GoogleCredentials[F[_]] {
-  def projectId: String
+
+  /** obtain quota project id if any.
+    */
+  def projectId: Option[String]
   def get: F[AccessToken]
 }

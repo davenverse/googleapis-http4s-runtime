@@ -48,18 +48,9 @@ object ExternalAccountCredentials {
       client: Client[F],
       externalAccount: CredentialsFile.ExternalAccount,
       scopes: Seq[String],
-  )(implicit F: Temporal[F]): F[GoogleCredentials[F]] = {
-    val pid: F[String] = externalAccount.quota_project_id match {
-      case Some(id) => F.pure(id)
-      case None =>
-        F.pure(
-          "quota project id for external account is nullable." +
-            "Perhaps, we need change GoogleCredentials#id signature.",
-        )
-    }
-
+  )(implicit F: Temporal[F]): F[GoogleCredentials[F]] =
     for {
-      id <- pid
+      id <- F.pure(externalAccount.quota_project_id)
       impersonationURL <- externalAccount.service_account_impersonation_url.traverse(
         Uri.fromString.andThen(F.fromEither),
       )
@@ -92,5 +83,4 @@ object ExternalAccountCredentials {
             F.raiseError(new NotImplementedError("AwsCredentials is not implemented yet."))
         }
     } yield credentials
-  }
 }
