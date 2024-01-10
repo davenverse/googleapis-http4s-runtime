@@ -28,13 +28,14 @@ import io.circe.parser
 import org.http4s.googleapis.runtime.GoogleEnvironmentDetection
 
 import client.Client
+import org.http4s.googleapis.runtime.ComputeMetadata
 
 /** ApplicationDefaultCredentials is a strategy Google auth libraries use to detect and select
   * credentials based on environment or context.
   * @see
   *   https://google.aip.dev/auth/4110
   */
-object ApplicationDefaultCredentials extends GoogleEnvironmentDetection {
+object ApplicationDefaultCredentials {
 
   /** create application default credentials
     * @see
@@ -45,15 +46,19 @@ object ApplicationDefaultCredentials extends GoogleEnvironmentDetection {
   )(implicit F: Temporal[F]): F[GoogleCredentials[F]] = for {
     localCredFile <- fromLocal
     credentials <- localCredFile match {
-      case None => // Check workload credentials
-        F.ifM(isOnGCE)(
-          ComputeEngineCredentials(client, Set()),
-          F.raiseError(
-            new IOException(
-              "Unable to lookup Google application default credentials on Google virtual machine environment.",
+      case None =>
+        for {
+          met <- ComputeMetadata(client, Set())
+          env = GoogleEnvironmentDetection(met)
+          credentials <- F.ifM(env.isOnGCE)(
+            ComputeEngineCredentials(met),
+            F.raiseError(
+              new IOException(
+                "Unable to lookup Google application default credentials on Google virtual machine environment.",
+              ),
             ),
-          ),
-        )
+          )
+        } yield credentials
       case Some(file) =>
         Oauth2Credentials[F](client, file)
     }

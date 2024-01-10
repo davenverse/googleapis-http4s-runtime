@@ -20,19 +20,25 @@ import cats.effect.Concurrent
 import cats.effect.Temporal
 import cats.effect.std.Env
 import cats.syntax.all._
-import com.comcast.ip4s.IpLiteralSyntax
+import com.comcast.ip4s._
 import fs2.io.IOException
 import io.circe.Decoder
+import org.http4s.googleapis.runtime.Options.Full
+import org.http4s.googleapis.runtime.Options.FullWithLicense
+import org.http4s.googleapis.runtime.Options.Standard
+import org.typelevel.ci.CIStringSyntax
 
 import circe.jsonOf
 import client.Client
 import auth.AccessToken
 import syntax.all._
-import org.http4s.googleapis.runtime.Options.Standard
-import org.http4s.googleapis.runtime.Options.Full
-import org.http4s.googleapis.runtime.Options.FullWithLicense
-
 trait ComputeMetadata[F[_]] {
+
+  /** @return
+    *   `true` when response to metadata server contains `Metadata-Flavor: Google` header, which
+    *   implies application is running on Google computing environment.
+    */
+  private[runtime] def ping: F[Boolean]
 
   /** The GCP project id.
     * @see
@@ -99,7 +105,8 @@ object ComputeMetadata {
 
   // `Metadata-Flavor: Google` is required to prevent SSRF since v1.
   // Without this headers, Google metadata server returns 403 response.
-  private val headers = Headers("Metadata-Flavor" -> "Google")
+  private val metHeader = Header.Raw(ci"Metadata-Flavor", "Google")
+  private val headers = Headers(metHeader)
 
   /** Host URI for Google metadata server. */
   private val DEFAULT_METADATA_SERVER_URL = uri"http://metadata.google.internal"
@@ -116,6 +123,10 @@ object ComputeMetadata {
         .traverse(Uri.fromString.andThen(F.fromEither))
       metServerURL = maybeMetServerURL.getOrElse(DEFAULT_METADATA_SERVER_URL)
     } yield new ComputeMetadata[F] {
+      private[runtime] def ping: F[Boolean] =
+        client
+          .run(Request(uri = metServerURL, headers = headers))
+          .use(_.headers.headers.exists(_ == metHeader).pure)
 
       // A base URL for compute engine metadata entries.
       val computeMetaV1: Uri = metServerURL / "computeMetadata/v1"
