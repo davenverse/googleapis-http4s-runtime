@@ -21,9 +21,11 @@ import cats.effect.Concurrent
 import cats.effect.Temporal
 import cats.effect.std.Env
 import cats.syntax.all._
+import fs2.io.IOException
 import fs2.io.file.Files
 import fs2.io.file.Path
 import io.circe.parser
+import org.http4s.googleapis.runtime.GoogleEnvironmentDetection
 
 import client.Client
 
@@ -32,7 +34,7 @@ import client.Client
   * @see
   *   https://google.aip.dev/auth/4110
   */
-object ApplicationDefaultCredentials {
+object ApplicationDefaultCredentials extends GoogleEnvironmentDetection {
 
   /** create application default credentials
     * @see
@@ -44,8 +46,13 @@ object ApplicationDefaultCredentials {
     localCredFile <- fromLocal
     credentials <- localCredFile match {
       case None => // Check workload credentials
-        F.raiseError(
-          new NotImplementedError("workload credentials lookup is not implemented yet"),
+        F.ifM(isOnGCE)(
+          ComputeEngineCredentials(client, Set()),
+          F.raiseError(
+            new IOException(
+              "Unable to lookup Google application default credentials on Google virtual machine environment.",
+            ),
+          ),
         )
       case Some(file) =>
         Oauth2Credentials[F](client, file)
