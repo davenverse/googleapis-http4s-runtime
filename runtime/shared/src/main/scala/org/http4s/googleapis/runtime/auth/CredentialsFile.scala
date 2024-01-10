@@ -130,6 +130,10 @@ object CredentialsFile {
 
       /** @param url
         *   a url to obtain subject token from
+        * @param headers
+        *   headers sent to subject token endpoint
+        * @param format
+        *   determine token format is whether text or JSON
         */
       case class Url(
           url: String,
@@ -140,6 +144,31 @@ object CredentialsFile {
           file: String,
           format: Option[ExternalCredentialUrlFormat],
       ) extends ExternalCredentialSource
+
+      /** @param regional_cred_verification_url
+        *   This defines the regional AWS GetCallerIdentity action URL. This URL should be used
+        *   to determine the AWS account ID and its roles.
+        *
+        * @param environment_id
+        *   This is the environment identifier, of format aws${version}.
+        *
+        * @param region_url
+        *   This URL should be used to determine the current AWS region needed for the signed
+        *   request construction when the region environment variables are not present.
+        *
+        * @param url
+        *   This AWS metadata server URL should be used to retrieve the access key, secret key
+        *   and security token needed to sign the GetCallerIdentity request.
+        *
+        * @param imdsv2_session_token_url
+        *   Presence of this URL enforces the auth libraries to fetch a Session Token from AWS.
+        *   This field is required for EC2 instances using IMDSv2. This Session Token would
+        *   later be used while making calls to the metadata endpoint.
+        *
+        * @see
+        *   https://google.aip.dev/auth/4117#determining-the-subject-token-in-aws
+        */
+
       case class Aws(
           regional_cred_verification_url: String,
           environment_id: String,
