@@ -21,11 +21,14 @@ import cats.effect.Concurrent
 import cats.effect.Temporal
 import cats.effect.std.Env
 import cats.syntax.all._
+import fs2.io.IOException
 import fs2.io.file.Files
 import fs2.io.file.Path
 import io.circe.parser
+import org.http4s.googleapis.runtime.GoogleEnvironmentDetection
 
 import client.Client
+import org.http4s.googleapis.runtime.ComputeMetadata
 
 /** ApplicationDefaultCredentials is a strategy Google auth libraries use to detect and select
   * credentials based on environment or context.
@@ -43,10 +46,19 @@ object ApplicationDefaultCredentials {
   )(implicit F: Temporal[F]): F[GoogleCredentials[F]] = for {
     localCredFile <- fromLocal
     credentials <- localCredFile match {
-      case None => // Check workload credentials
-        F.raiseError(
-          new NotImplementedError("workload credentials lookup is not implemented yet"),
-        )
+      case None =>
+        for {
+          met <- ComputeMetadata(client, Set())
+          env = GoogleEnvironmentDetection(met)
+          credentials <- F.ifM(env.isOnGCE)(
+            ComputeEngineCredentials(met),
+            F.raiseError(
+              new IOException(
+                "Unable to lookup Google application default credentials on Google virtual machine environment.",
+              ),
+            ),
+          )
+        } yield credentials
       case Some(file) =>
         Oauth2Credentials[F](client, file)
     }
