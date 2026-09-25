@@ -8,7 +8,7 @@ ThisBuild / developers := List(
   tlGitHubDev("christopherdavenport", "Christopher Davenport"),
   tlGitHubDev("armanbilge", "Arman Bilge"),
 )
-ThisBuild / tlCiReleaseBranches := Seq("main")
+ThisBuild / tlCiReleaseBranches := Seq()
 
 val Scala213 = "2.13.18"
 ThisBuild / crossScalaVersions := Seq(Scala213, "3.3.1")
